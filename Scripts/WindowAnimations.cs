@@ -5,42 +5,73 @@ namespace TLP.UI
 {
     public static class WindowAnimator
     {
-        public static IEnumerator Animate(Window wnd, float duration, float strength, bool invert, AnimationCurve inCurve, AnimationCurve outCurve)
+        public static IEnumerator Animate(CanvasGroup group, RectTransform rt, WindowTransition transition, bool invert)
         {
-            yield return Animate(wnd.Transition, wnd.GetComponent<CanvasGroup>(), wnd.GetComponent<RectTransform>(), duration, strength, invert, inCurve, outCurve);
-        }
-
-        public static IEnumerator Animate(WindowAnimationType transition, CanvasGroup group, RectTransform rt, float duration, float strength, bool invert, AnimationCurve inCurve, AnimationCurve outCurve)
-        {
-            switch (transition)
+            switch (transition.Type)
             {
-                case WindowAnimationType.None:
+                case WindowTransition.TransitionType.None:
                     yield return InstantRoutine(group, invert);
                     break;
-                case WindowAnimationType.SlideFromLeft:
-                    yield return SlideFromLeftRoutine(group, rt, duration, strength, invert);
+                case WindowTransition.TransitionType.SlideFromLeft:
+                    yield return SlideFromLeftRoutine(group, rt, transition.Duration, transition.Strength, invert);
                     break;
-                case WindowAnimationType.SlideFromRight:
-                    yield return SlideFromRightRoutine(group, rt, duration, strength, invert);
+                case WindowTransition.TransitionType.SlideFromRight:
+                    yield return SlideFromRightRoutine(group, rt, transition.Duration, transition.Strength, invert);
                     break;
-                case WindowAnimationType.SlideFromTop:
-                    yield return SlideFromTopRoutine(group, rt, duration, strength, invert);
+                case WindowTransition.TransitionType.SlideFromTop:
+                    yield return SlideFromTopRoutine(group, rt, transition.Duration, transition.Strength, invert);
                     break;
-                case WindowAnimationType.SlideFromBottom:
-                    yield return SlideFromBottomRoutine(group, rt, duration, strength, invert);
+                case WindowTransition.TransitionType.SlideFromBottom:
+                    yield return SlideFromBottomRoutine(group, rt, transition.Duration, transition.Strength, invert);
                     break;
-                case WindowAnimationType.FadeIn:
-                    yield return FadeInRoutine(group, duration, invert);
+                case WindowTransition.TransitionType.Fade:
+                    yield return FadeInRoutine(group, transition.Duration, invert);
                     break;
-                case WindowAnimationType.Popup:
-                    yield return PopupRoutine(group, rt, duration, (invert ? outCurve : inCurve), invert);
+                case WindowTransition.TransitionType.Popup:
+                    yield return PopupRoutine(group, rt, transition.Duration, (invert ? transition.PopupOutCurve : transition.PopupInCurve), invert);
                     break;
-                case WindowAnimationType.Animator:
-                    yield return AnimatorRoutine(group, duration, invert);
+                case WindowTransition.TransitionType.Animator:
+                    yield return AnimatorRoutine(group, transition.Duration, invert);
                     break;
                 default:
                     break;
             }
+        }
+
+        public static IEnumerator Animate(Window wnd, bool invert)
+        {
+            yield return Animate(wnd.GetComponent<CanvasGroup>(), wnd.GetComponent<RectTransform>(), wnd.Transition, invert);
+        }
+
+        public static IEnumerator Animate(GameObject go, WindowTransition transition, bool invert)
+        {
+            CanvasGroup group = go.GetComponent<CanvasGroup>();
+            RectTransform rt = go.GetComponent<RectTransform>();
+
+            if ((group == null) || (rt == null))
+            {
+                Debug.LogError("WindowAnimations.Animate requires a CanvasGroup and a RectTransform", go);
+                throw new System.InvalidOperationException("Required components missing");
+            }
+
+            yield return Animate(group, rt, transition, invert);
+        }
+
+        public static IEnumerator Animate(GameObject go, WindowTransition transition, bool invert, System.Action onFinished)
+        {
+            CanvasGroup group = go.GetComponent<CanvasGroup>();
+            RectTransform rt = go.GetComponent<RectTransform>();
+
+            if ((group == null) || (rt == null))
+            {
+                Debug.LogError("WindowAnimations.Animate requires a CanvasGroup and a RectTransform", go);
+                throw new System.InvalidOperationException("Required components missing");
+            }
+
+            yield return Animate(group, rt, transition, invert);
+
+            if (onFinished != null)
+                onFinished();
         }
 
         public static IEnumerator SlideFromLeftRoutine(CanvasGroup group, RectTransform rt, float duration, float strength, bool invert)
@@ -142,17 +173,5 @@ namespace TLP.UI
                 yield return new WaitForSeconds(duration);
             }
         }
-    }
-
-    public enum WindowAnimationType
-    {
-        None,
-        SlideFromLeft,
-        SlideFromRight,
-        SlideFromTop,
-        SlideFromBottom,
-        FadeIn,
-        Popup,
-        Animator
     }
 }

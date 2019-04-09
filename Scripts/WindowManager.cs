@@ -17,19 +17,16 @@ namespace TLP.UI
 
         #region Editor-assigned fields
 
-        [Header("Window transition animations")]
-        [SerializeField] private float transitionTime = 0.1f;
-        [SerializeField] private float transitionStrength = 200f;
-        [SerializeField] private AnimationCurve popupInCurve = new AnimationCurve(new Keyframe[] {
-            new Keyframe { time=0, value=0.75f },
-            new Keyframe { time=0.33f, value=1, inTangent=0.72f, outTangent = 0.72f },
-            new Keyframe { time=1, value=1, inTangent=0.78f, outTangent=0.78f }
-        });
-        [SerializeField] private AnimationCurve popupOutCurve = new AnimationCurve(new Keyframe[] {
-            new Keyframe { time=0, value=0.75f },
-            new Keyframe { time=1, value=1, inTangent=0.81f, outTangent=0.81f }
-        });
-        
+#pragma warning disable 0649
+
+        [Header("Controller Settings")]
+        public bool UseController = false;
+        public string NextUIButton = "";
+        public string PreviousUIButton = "";
+
+        [Header("Default Transition")]
+        [SerializeField] private WindowTransition defaultTransition;
+
         [Header("Auto-registered windows")]
         [SerializeField] private Window[] autoRegisteredWindows;
 
@@ -44,16 +41,15 @@ namespace TLP.UI
         [Header("Callbacks")]
         public UnityEvent OnStart;
         //public UnityEvent OnWindowShown;
-        
+
+#pragma warning restore 0649
+
         #endregion
-        
+
         #region Public stuff       
 
         public Window CurrentWindow { get { return (openWindows.Count == 0 ? null : openWindows[openWindows.Count - 1]); } }
-        public float TransitionTime { get { return transitionTime; } }
-        public float TransitionStrength { get { return transitionStrength; } }
-        public AnimationCurve PopupInCurve { get { return popupInCurve; } }
-        public AnimationCurve PopupOutCurve { get { return popupOutCurve; } }
+        public WindowTransition DefaultTransition { get { return defaultTransition; } }
         
         public enum Sound
         {
@@ -142,6 +138,11 @@ namespace TLP.UI
             return null;
         }
 
+        public bool HasPrevNextButtons()
+        {
+            return (!string.IsNullOrEmpty(PreviousUIButton) && !string.IsNullOrEmpty(NextUIButton));
+        }
+
         #endregion
 
         #region Internals
@@ -169,7 +170,12 @@ namespace TLP.UI
         private void Start()
         {
             if (instance == this)
+            {
+                // Enable controller support if there's a joystick connected
+                UseController = (Input.GetJoystickNames().Length > 0);
+
                 OnStart.Invoke();
+            }
         }
 
         private void Update()
@@ -211,7 +217,7 @@ namespace TLP.UI
             if ((audioSource != null) && (windowHideSound != null))
                 audioSource.PlayOneShot(windowHideSound);
 
-            yield return WindowAnimator.Animate(wnd, transitionTime, transitionStrength, true, popupInCurve, popupOutCurve);
+            yield return WindowAnimator.Animate(wnd, true);
 
             wnd.OnDeactivated.Invoke();
 
@@ -246,19 +252,12 @@ namespace TLP.UI
             if ((audioSource != null) && (windowShowSound != null))
                 audioSource.PlayOneShot(windowShowSound);
 
-            yield return WindowAnimator.Animate(wnd, transitionTime, transitionStrength, false, popupInCurve, popupOutCurve);
+            yield return WindowAnimator.Animate(wnd, false);
 
-            if ((wnd.FirstControl != null) && ShouldActivateFirstControl())
+            if ((wnd.FirstControl != null) && UseController)
                 wnd.FirstControl.Select();
             
             wnd.OnActivated.Invoke();
-        }
-
-        private bool ShouldActivateFirstControl()
-        {
-            // ReWired:
-            // return (ReInput.players.SystemPlayer.controllers.joystickCount > 0);
-            return false;
         }
 
         #endregion

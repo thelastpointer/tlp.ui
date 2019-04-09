@@ -10,39 +10,22 @@ namespace TLP.UI
 {
     public class Tabs : MonoBehaviour
     {
-        [Header("Tabs & Toggles")]
-        [SerializeField]
-        private CanvasGroup[] tabPages;
+#pragma warning disable 0649
 
-        [SerializeField]
-        private Toggle[] toggles;
+        [Header("Tabs & Toggles")]
+        [SerializeField] private CanvasGroup[] tabPages;
+        [SerializeField] private Toggle[] toggles;
 
         [Header("Transition")]
-        [SerializeField]
-        private WindowAnimationType transition = WindowAnimationType.FadeIn;
+        [SerializeField] private bool useDefaultTransition = true;
+        [SerializeField] private WindowTransition customTransition;
 
-        [SerializeField]
-        private bool useWindowManagerTransitionSetup = true;
+        [Header("Callbacks")]
+        public UnityEngine.Events.UnityEvent<int> OnTabSelected;
 
-        [SerializeField]
-        private float transitionTime = 0.15f;
+#pragma warning disable 0649
 
-        [SerializeField]
-        private float transitionStrength = 100;
-
-        [SerializeField]
-        private AnimationCurve popupInCurve = new AnimationCurve(new Keyframe[] {
-            new Keyframe { time=0, value=0.75f },
-            new Keyframe { time=0.33f, value=1, inTangent=0.72f, outTangent = 0.72f },
-            new Keyframe { time=1, value=1, inTangent=0.78f, outTangent=0.78f }
-        });
-
-        [SerializeField]
-        private AnimationCurve popupOutCurve = new AnimationCurve(new Keyframe[] {
-            new Keyframe { time=0, value=0.75f },
-            new Keyframe { time=1, value=1, inTangent=0.81f, outTangent=0.81f }
-        });
-
+        private int currentIdx = 0;
         private Coroutine transitionRoutine = null;
 
         private void Awake()
@@ -66,29 +49,75 @@ namespace TLP.UI
             tabPages[0].gameObject.SetActive(true);
             for (int i=1; i<tabPages.Length; i++)
                 tabPages[i].gameObject.SetActive(false);
+
+            if (OnTabSelected != null)
+                OnTabSelected.Invoke(0);
+        }
+
+        private void Update()
+        {
+            if (WindowManager.Instance.HasPrevNextButtons())
+            {
+                if (Input.GetButtonDown(WindowManager.Instance.PreviousUIButton))
+                    ShowPrevious();
+                if (Input.GetButtonDown(WindowManager.Instance.NextUIButton))
+                    ShowNext();
+            }
         }
 
         public void ShowTab(int idx)
         {
+            if ((idx < 0) || (idx >= tabPages.Length))
+                throw new System.ArgumentException("idx");
+
             if (transitionRoutine != null)
                 return;
 
-            List<CanvasGroup> hideTabs = new List<CanvasGroup>();
-            for (int i = 0; i < idx; i++)
-            {
-                if (tabPages[i].gameObject.activeSelf)
-                    hideTabs.Add(tabPages[i]);
-            }
-            for (int i = idx+1; i < tabPages.Length; i++)
-            {
-                if (tabPages[i].gameObject.activeSelf)
-                    hideTabs.Add(tabPages[i]);
-            }
-
-            if ((hideTabs.Count == 0) && tabPages[idx].gameObject.activeSelf)
+            if (currentIdx == idx)
                 return;
 
-            transitionRoutine = StartCoroutine(Transition(hideTabs, tabPages[idx]));
+            currentIdx = idx;
+
+            List<CanvasGroup> hideTabs = new List<CanvasGroup>();
+            for (int i = 0; i < currentIdx; i++)
+            {
+                if (tabPages[i].gameObject.activeSelf)
+                    hideTabs.Add(tabPages[i]);
+            }
+            for (int i = currentIdx + 1; i < tabPages.Length; i++)
+            {
+                if (tabPages[i].gameObject.activeSelf)
+                    hideTabs.Add(tabPages[i]);
+            }
+
+            if ((toggles != null) && (toggles.Length > currentIdx))
+                toggles[currentIdx].isOn = true;
+
+            if ((hideTabs.Count == 0) && tabPages[currentIdx].gameObject.activeSelf)
+                return;
+
+            transitionRoutine = StartCoroutine(Transition(hideTabs, tabPages[currentIdx]));
+
+            if (OnTabSelected != null)
+                OnTabSelected.Invoke(currentIdx);
+        }
+
+        public void ShowNext()
+        {
+            int newIdx = currentIdx + 1;
+            if (newIdx >= tabPages.Length)
+                newIdx = 0;
+
+            ShowTab(newIdx);
+        }
+
+        public void ShowPrevious()
+        {
+            int newIdx = currentIdx - 1;
+            if (newIdx < 0)
+                newIdx = tabPages.Length - 1;
+
+            ShowTab(newIdx);
         }
         
         private IEnumerator Transition(List<CanvasGroup> hideTabs, CanvasGroup showTab)
@@ -99,15 +128,11 @@ namespace TLP.UI
                 foreach (var group in hideTabs)
                 {
                     lastHideRoutine = StartCoroutine(WindowAnimator.Animate(
-                        transition,
                         group,
                         group.GetComponent<RectTransform>(),
-                        (useWindowManagerTransitionSetup ? WindowManager.Instance.TransitionTime : transitionTime),
-                        (useWindowManagerTransitionSetup ? WindowManager.Instance.TransitionStrength : transitionStrength),
-                        true,
-                        (useWindowManagerTransitionSetup ? WindowManager.Instance.PopupInCurve : popupInCurve),
-                        (useWindowManagerTransitionSetup ? WindowManager.Instance.PopupOutCurve : popupOutCurve))
-                    );
+                        (useDefaultTransition ? WindowManager.Instance.DefaultTransition : customTransition),
+                        true
+                    ));
                 }
 
                 yield return lastHideRoutine;
@@ -121,16 +146,13 @@ namespace TLP.UI
             if (!showTab.gameObject.activeSelf)
             {
                 showTab.gameObject.SetActive(true);
+
                 yield return StartCoroutine(WindowAnimator.Animate(
-                    transition,
                     showTab,
                     showTab.GetComponent<RectTransform>(),
-                    (useWindowManagerTransitionSetup ? WindowManager.Instance.TransitionTime : transitionTime),
-                    (useWindowManagerTransitionSetup ? WindowManager.Instance.TransitionStrength : transitionStrength),
-                    false,
-                    (useWindowManagerTransitionSetup ? WindowManager.Instance.PopupInCurve : popupInCurve),
-                    (useWindowManagerTransitionSetup ? WindowManager.Instance.PopupOutCurve : popupOutCurve))
-                );
+                    (useDefaultTransition ? WindowManager.Instance.DefaultTransition : customTransition),
+                    false
+                ));
             }
 
             transitionRoutine = null;
@@ -138,6 +160,7 @@ namespace TLP.UI
 
         private void ValidateToggleGroup()
         {
+            // Check if we already have a toggle group?
             ToggleGroup tgroup = null;
             foreach (var toggle in toggles)
             {
@@ -148,14 +171,21 @@ namespace TLP.UI
                 }
             }
 
+            // If none, create one
             if (tgroup == null)
                 tgroup = gameObject.AddComponent<ToggleGroup>();
-            
+
+            // Assign toggle groups again (note: some toggles might not had the toggle group assigned)
             foreach (var toggle in toggles)
+            {
                 toggle.group = tgroup;
+                toggle.isOn = false;
+            }
+
+            tgroup.SetAllTogglesOff();
+            toggles[0].isOn = true;
 
             tgroup.allowSwitchOff = false;
-            tgroup.SetAllTogglesOff();
         }
     }
 }
@@ -169,39 +199,13 @@ namespace TLP.UI.Editors
     {
         public override void OnInspectorGUI()
         {
+            base.OnInspectorGUI();
+
             var tabPageProperty = serializedObject.FindProperty("tabPages");
             var togglesProperty = serializedObject.FindProperty("toggles");
 
-            EditorGUI.BeginChangeCheck();
-
-            EditorGUILayout.PropertyField(tabPageProperty, true);
-            EditorGUILayout.PropertyField(togglesProperty, true);
-
-            if (EditorGUI.EndChangeCheck())
-                this.Repaint();
-            
-            //if ((togglesProperty.arraySize > 0) && (togglesProperty.arraySize != tabPageProperty.arraySize))
-            //    EditorGUILayout.HelpBox("Warning: tab page count and toggle count mismatch!", MessageType.Warning);
-            
-            EditorGUILayout.PropertyField(serializedObject.FindProperty("transition"));
-
-            EditorGUI.BeginChangeCheck();
-
-            var wmsetupProperty = serializedObject.FindProperty("useWindowManagerTransitionSetup");
-            EditorGUILayout.PropertyField(wmsetupProperty);
-
-            if (EditorGUI.EndChangeCheck())
-                this.Repaint();
-
-            if (!wmsetupProperty.boolValue)
-            {
-                EditorGUILayout.PropertyField(serializedObject.FindProperty("transitionTime"));
-                EditorGUILayout.PropertyField(serializedObject.FindProperty("transitionStrength"));
-                EditorGUILayout.PropertyField(serializedObject.FindProperty("popupInCurve"));
-                EditorGUILayout.PropertyField(serializedObject.FindProperty("popupOutCurve"));
-            }
-
-            serializedObject.ApplyModifiedProperties();
+            if ((togglesProperty.arraySize > 0) && (togglesProperty.arraySize != tabPageProperty.arraySize))
+                EditorGUILayout.HelpBox("Warning: tab page count and toggle count mismatch!", MessageType.Warning);
         }
     }
 }
