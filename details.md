@@ -14,6 +14,8 @@ You can show a window by calling `WindowManager.Instance.ShowWindow(id)`. This w
 
 ShowWindow and Hide are defined in the Window class too, so for your button event handlers you can just refer to the containing Window. This is handy if you have Windows in multiple scenes.
 
+Showing and hiding windows is a thread-safe operation.
+
 ## Tabs
 Tabs show and hide tab pages, which are GameObjects with CanvasGroups (again for fading). To show a tab, call `ShowTab(idx)`. It supports Toggles to show tabs; assign a Toggle for each tab page to do that. Tabs will do the rest, including attaching a ToggleGroup and assigning event handlers.
 
@@ -33,6 +35,8 @@ These are intented to be called from code, so they will call a callback function
 * `HideProgressModal` -- Hides the progress window. Don't forget to call this when finished!
 * `ShowProgressOverlay` -- displays a text, a Filled Image, and a Slider as an overlay. The user can use the rest of the UI normally. call this repeatedly.
 * `HideProgressOverlay` -- hides the progress overlay. Don't forget to call this when finished!
+* `ShowProgressInfinite` -- shows an infite loader. Use this when doing a lengthy operation with an unknown duration.
+* `HideProgressInfinite` -- hides the inifite loader.
 
 There's also a `WaitForModals()` function which calls a function as soon as all message boxes are hidden.
 
@@ -55,8 +59,10 @@ If you assign an AudioSource and some AudioClips, the WindowManager will automat
 If you want a Window to be modal (cover the rest of the UI), assign a full-screen, click-blocking transform to its BackgroundDenier field. When a Window is shown and it has a BackgroundDenier, the denier is placed right above the Window in the hierarchy and activates it too. It is of course hidden when the Window is closed.
 
 ## Controller support
-The WindowManager has _some_ controller support. If you check `UseController`, it will auto-select the first control in a Window that's displayed. That's it, sorry.
+The WindowManager has _some_ controller support. If you check `UseController`, it will auto-select the first control in a Window that's displayed.
 
 Controller detection is simple: if there is at least one "joystick" connected, I assume you have a controller.
 
-There is also two user-defined buttons: Next UI Button and Previous UI Button. If these are set (and correctly set up in the Input manager), then pressing them will switch between tabs and call a Window's `OnNextWindow` and `OnPreviousWindow` events. Note: if you have both tabs and these events, both will be called. So for example, you could set up the "UINext" and "UIPrev" buttons in the Input manager, assign them a joystick button, enter these in the WindowManager and you're ready to go!
+There is also two user-defined buttons: Next UI Button and Previous UI Button. If these are set (and correctly set up in the Input manager), then pressing them will switch between tabs and call a Window's `OnNextWindow` and `OnPreviousWindow` events. Note: if you have both tabs and these events, both will be called.
+
+So for example, you could set up the "UINext" and "UIPrev" buttons in the Input manager, assign them a joystick button, enter these in the WindowManager and you're ready to go!

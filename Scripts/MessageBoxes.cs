@@ -18,32 +18,32 @@ namespace TLP.UI
 
         [Header("Transition")]
         [SerializeField] private bool useDefaultTransition = true;
-        [SerializeField] private WindowTransition customTransition;
+        [SerializeField] private UIAnimation customTransition;
 
         [Header("Background Denier")]
         [SerializeField] private GameObject background;
 
         [Header("Simple message box")]
-        [SerializeField] private GameObject messageBoxContainer;
+        [SerializeField] private AnimatedPanel messageBoxContainer;
         [SerializeField] private Text messageBoxTitle;
         [SerializeField] private Text messageBoxText;
         [SerializeField] private Button messageBoxButton;
 
         [Header("Error dialog box")]
-        [SerializeField] private GameObject errorBoxContainer;
+        [SerializeField] private AnimatedPanel errorBoxContainer;
         [SerializeField] private Text errorBoxTitle;
         [SerializeField] private Text errorBoxText;
         [SerializeField] private Button errorBoxButton;
 
         [Header("Yes/no prompt")]
-        [SerializeField] private GameObject promptContainer;
+        [SerializeField] private AnimatedPanel promptContainer;
         [SerializeField] private Text promptTitle;
         [SerializeField] private Text promptText;
         [SerializeField] private Button promptButtonYes;
         [SerializeField] private Button promptButtonNo;
 
         [Header("Text prompt")]
-        [SerializeField] private GameObject textPromptContainer;
+        [SerializeField] private AnimatedPanel textPromptContainer;
         [SerializeField] private Text textPromptTitle;
         [SerializeField] private Text textPromptText;
         [SerializeField] private InputField textPromptInput;
@@ -51,7 +51,7 @@ namespace TLP.UI
         [SerializeField] private Button textPromptButtonCancel;
 
         [Header("Progress dialog")]
-        [SerializeField] private GameObject progressContainer;
+        [SerializeField] private AnimatedPanel progressContainer;
         [SerializeField] private Text progressTitle;
         [SerializeField] private Text progressText;
         [SerializeField] private Image progressFillImage;
@@ -63,13 +63,20 @@ namespace TLP.UI
         [SerializeField] private Image progressOverlayFillImage;
         [SerializeField] private Slider progressOverlayFillSlider;
 
+        [Header("Progress Infinite")]
+        [SerializeField] private AnimatedPanel progressInfiniteContainer;
+        [SerializeField] private Text progressInfiniteText;
+
 #pragma warning restore 0649
         #endregion
+
+        private bool progressModalVisible = false;
+        private bool progressInfiniteVisible = false;
 
         // Singleton
         public static MessageBoxes Instance { get; private set; }
 
-        public WindowTransition Transition
+        public UIAnimation Transition
         {
             get
             {
@@ -113,10 +120,10 @@ namespace TLP.UI
             messageBoxButton.onClick.RemoveAllListeners();
             messageBoxButton.onClick.AddListener(() =>
             {
-                StartCoroutine(WindowAnimator.Animate(messageBoxContainer, Transition, true, () =>
+                background.SetActive(false);
+                StartCoroutine(UIAnimator.AnimationRoutine(messageBoxContainer, -1, () =>
                 {
-                    background.SetActive(false);
-                    messageBoxContainer.SetActive(false);
+                    messageBoxContainer.gameObject.SetActive(false);
                     ModalClosed();
                     if (onDismissed != null)
                         onDismissed();
@@ -124,8 +131,8 @@ namespace TLP.UI
             });
 
             background.SetActive(true);
-            messageBoxContainer.SetActive(true);
-            StartCoroutine(WindowAnimator.Animate(messageBoxContainer, Transition, false));
+            messageBoxContainer.gameObject.SetActive(true);
+            StartCoroutine(UIAnimator.AnimationRoutine(messageBoxContainer, 1));
         }
         public void ShowMessage(string message)
         {
@@ -157,10 +164,10 @@ namespace TLP.UI
             errorBoxButton.onClick.RemoveAllListeners();
             errorBoxButton.onClick.AddListener(() =>
             {
-                StartCoroutine(WindowAnimator.Animate(errorBoxContainer, Transition, true, () =>
+                background.SetActive(false);
+                StartCoroutine(UIAnimator.AnimationRoutine(errorBoxContainer, -1, () =>
                 {
-                    background.SetActive(false);
-                    errorBoxContainer.SetActive(false);
+                    errorBoxContainer.gameObject.SetActive(false);
                     ModalClosed();
                     if (onDismissed != null)
                         onDismissed();
@@ -168,8 +175,8 @@ namespace TLP.UI
             });
 
             background.SetActive(true);
-            errorBoxContainer.SetActive(true);
-            StartCoroutine(WindowAnimator.Animate(errorBoxContainer, Transition, false));
+            errorBoxContainer.gameObject.SetActive(true);
+            StartCoroutine(UIAnimator.AnimationRoutine(errorBoxContainer, 1));
         }
         public void ShowError(string title, string message, Action onDismissed)
         {
@@ -200,10 +207,10 @@ namespace TLP.UI
             promptButtonYes.onClick.RemoveAllListeners();
             promptButtonYes.onClick.AddListener(() =>
             {
-                StartCoroutine(WindowAnimator.Animate(promptContainer, Transition, true, () =>
+                background.SetActive(false);
+                StartCoroutine(UIAnimator.AnimationRoutine(promptContainer, -1, () =>
                 {
-                    background.SetActive(false);
-                    promptContainer.SetActive(false);
+                    promptContainer.gameObject.SetActive(false);
                     ModalClosed();
                     if (onYes != null)
                         onYes();
@@ -213,10 +220,10 @@ namespace TLP.UI
             promptButtonNo.onClick.RemoveAllListeners();
             promptButtonNo.onClick.AddListener(() =>
             {
-                StartCoroutine(WindowAnimator.Animate(promptContainer, Transition, true, () =>
+                background.SetActive(false);
+                StartCoroutine(UIAnimator.AnimationRoutine(promptContainer, -1, () =>
                 {
-                    background.SetActive(false);
-                    promptContainer.SetActive(false);
+                    promptContainer.gameObject.SetActive(false);
                     ModalClosed();
                     if (onNo != null)
                         onNo();
@@ -224,8 +231,8 @@ namespace TLP.UI
             });
 
             background.SetActive(true);
-            promptContainer.SetActive(true);
-            StartCoroutine(WindowAnimator.Animate(promptContainer, Transition, false));
+            promptContainer.gameObject.SetActive(true);
+            StartCoroutine(UIAnimator.AnimationRoutine(promptContainer, 1));
         }
         public void PromptYesNo(string message, string yesButtonText, string noButtonText, Action onYes, Action onNo)
         {
@@ -257,10 +264,10 @@ namespace TLP.UI
             textPromptButtonAccept.onClick.RemoveAllListeners();
             textPromptButtonAccept.onClick.AddListener(() =>
             {
-                StartCoroutine(WindowAnimator.Animate(textPromptContainer, Transition, true, () =>
+                background.SetActive(false);
+                StartCoroutine(UIAnimator.AnimationRoutine(textPromptContainer, -1, () =>
                 {
-                    background.SetActive(false);
-                    textPromptContainer.SetActive(false);
+                    textPromptContainer.gameObject.SetActive(false);
                     ModalClosed();
                     if (onEntered != null)
                         onEntered(textPromptInput.text);
@@ -268,8 +275,8 @@ namespace TLP.UI
             });
 
             background.SetActive(true);
-            textPromptContainer.SetActive(true);
-            StartCoroutine(WindowAnimator.Animate(textPromptContainer, Transition, false));
+            textPromptContainer.gameObject.SetActive(true);
+            StartCoroutine(UIAnimator.AnimationRoutine(textPromptContainer, 1));
         }
         public void PromptText(string title, string message, Action<string> onEntered)
         {
@@ -302,10 +309,10 @@ namespace TLP.UI
             textPromptButtonAccept.onClick.RemoveAllListeners();
             textPromptButtonAccept.onClick.AddListener(() =>
             {
-                StartCoroutine(WindowAnimator.Animate(textPromptContainer, Transition, true, () =>
+                background.SetActive(false);
+                StartCoroutine(UIAnimator.AnimationRoutine(textPromptContainer, -1, () =>
                 {
-                    background.SetActive(false);
-                    textPromptContainer.SetActive(false);
+                    textPromptContainer.gameObject.SetActive(false);
                     ModalClosed();
                     if (onEntered != null)
                         onEntered(textPromptInput.text);
@@ -314,10 +321,10 @@ namespace TLP.UI
             textPromptButtonCancel.onClick.RemoveAllListeners();
             textPromptButtonCancel.onClick.AddListener(() =>
             {
-                StartCoroutine(WindowAnimator.Animate(textPromptContainer, Transition, true, () =>
+                background.SetActive(false);
+                StartCoroutine(UIAnimator.AnimationRoutine(textPromptContainer, -1, () =>
                 {
-                    background.SetActive(false);
-                    textPromptContainer.SetActive(false);
+                    textPromptContainer.gameObject.SetActive(false);
                     ModalClosed();
                     if (onCancelled != null)
                         onCancelled();
@@ -325,8 +332,8 @@ namespace TLP.UI
             });
 
             background.SetActive(true);
-            textPromptContainer.SetActive(true);
-            StartCoroutine(WindowAnimator.Animate(textPromptContainer, Transition, false));
+            textPromptContainer.gameObject.SetActive(true);
+            StartCoroutine(UIAnimator.AnimationRoutine(textPromptContainer, 1));
         }
         public void PromptText(string message, string acceptButtonText, string cancelButtonText, Action<string> onEntered, Action onCancelled)
         {
@@ -351,7 +358,8 @@ namespace TLP.UI
         }
         public void HideProgressOverlay()
         {
-            progressOverlayContainer.SetActive(false);
+            if (progressOverlayContainer != null)
+                progressOverlayContainer.SetActive(false);
         }
 
         // Modal progress
@@ -369,23 +377,51 @@ namespace TLP.UI
             if (progressFillSlider != null)
                 progressFillSlider.normalizedValue = progress;
 
-            if (!progressContainer.activeSelf)
+            if (!progressContainer.gameObject.activeSelf)
             {
                 ClearAll();
 
                 background.SetActive(true);
-                progressContainer.SetActive(true);
-                StartCoroutine(WindowAnimator.Animate(progressContainer, Transition, false));
+                progressContainer.gameObject.SetActive(true);
+                progressModalVisible = true;
             }
         }
         public void HideProgressModal()
         {
             background.SetActive(false);
-            StartCoroutine(WindowAnimator.Animate(progressContainer, Transition, true, () =>
+            progressModalVisible = false;
+        }
+
+        // Infinite progress
+        public void ShowProgressInfinite(string message)
+        {
+            if (progressInfiniteText != null)
+                progressInfiniteText.text = message;
+
+            if (!progressInfiniteContainer.gameObject.activeSelf)
             {
-                progressContainer.SetActive(false);
-                ModalClosed();
-            }));
+                ClearAll();
+                background.SetActive(true);
+                progressInfiniteContainer.gameObject.SetActive(true);
+
+                progressInfiniteVisible = true;
+            }
+        }
+        public void HideProgressInfinite()
+        {
+            // Note: take extra care with this; infinite progress is often interrupted
+            // (for example, an error happens), so make sure we don't hide the background
+            // if something else uses it.
+            bool canClose =
+                ((messageBoxContainer == null) || !messageBoxContainer.gameObject.activeSelf) &&
+                ((errorBoxContainer == null) || !errorBoxContainer.gameObject.activeSelf) &&
+                ((promptContainer == null) || !promptContainer.gameObject.activeSelf) &&
+                ((textPromptContainer == null) || !textPromptContainer.gameObject.activeSelf) &&
+                ((progressContainer == null) || !progressContainer.gameObject.activeSelf);
+            if (canClose)
+                background.SetActive(false);
+
+            progressInfiniteVisible = false;
         }
 
         public void ClearAll()
@@ -395,12 +431,19 @@ namespace TLP.UI
                 modalCloseCallbacks.Clear();
             }
 
-            messageBoxContainer.SetActive(false);
-            errorBoxContainer.SetActive(false);
-            promptContainer.SetActive(false);
-            textPromptContainer.SetActive(false);
-            progressContainer.SetActive(false);
+            if (messageBoxContainer != null)
+                messageBoxContainer.gameObject.SetActive(false);
+            if (errorBoxContainer != null)
+                errorBoxContainer.gameObject.SetActive(false);
+            if (promptContainer != null)
+                promptContainer.gameObject.SetActive(false);
+            if (textPromptContainer != null)
+                textPromptContainer.gameObject.SetActive(false);
+            if (progressContainer != null)
+                progressContainer.gameObject.SetActive(false);
             //progressOverlayContainer.SetActive(false);
+            if (progressInfiniteContainer != null)
+                progressInfiniteContainer.gameObject.SetActive(false);
         }
 
         public void WaitForModals(Action onCleared)
@@ -422,6 +465,37 @@ namespace TLP.UI
                 }
 
                 modalCloseCallbacks.Clear();
+            }
+        }
+
+        private void Update()
+        {
+            if (progressContainer != null)
+            {
+                // Show/hide progress modal
+                float prev = progressContainer.AnimationProgress;
+                UIAnimator.Animate(progressContainer, Time.unscaledDeltaTime * (progressModalVisible ? 1 : -1));
+
+                // If just closed, call ModalClosed
+                if ((prev > 0) && (progressContainer.AnimationProgress <= 0))
+                {
+                    progressContainer.gameObject.SetActive(false);
+                    ModalClosed();
+                }
+            }
+
+            if (progressInfiniteContainer != null)
+            {
+                // Show/hide infinite progress
+                float prev = progressInfiniteContainer.AnimationProgress;
+                UIAnimator.Animate(progressInfiniteContainer, Time.unscaledDeltaTime * (progressInfiniteVisible ? 1 : -1));
+
+                // If just closed, call ModalClosed
+                if ((prev > 0) && (progressInfiniteContainer.AnimationProgress <= 0))
+                {
+                    progressInfiniteContainer.gameObject.SetActive(false);
+                    ModalClosed();
+                }
             }
         }
     }

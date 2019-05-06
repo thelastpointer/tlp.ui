@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
@@ -13,20 +14,69 @@ namespace TLP.UI
 #pragma warning disable 0649
 
         [Header("Tabs & Toggles")]
-        [SerializeField] private CanvasGroup[] tabPages;
+        [SerializeField] private AnimatedPanel[] tabPages;
         [SerializeField] private Toggle[] toggles;
 
         [Header("Transition")]
         [SerializeField] private bool useDefaultTransition = true;
-        [SerializeField] private WindowTransition customTransition;
+        [SerializeField] private UIAnimation customTransition;
 
         [Header("Callbacks")]
-        public UnityEngine.Events.UnityEvent<int> OnTabSelected;
+        public TabSelectedEvent OnTabSelected;
 
-#pragma warning disable 0649
+        [System.Serializable]
+        public class TabSelectedEvent : UnityEngine.Events.UnityEvent<int> { }
+
+#pragma warning restore
 
         private int currentIdx = 0;
-        private Coroutine transitionRoutine = null;
+        private object idxLock = new object();
+
+        public void ShowTab(int idx)
+        {
+            int oldIdx = currentIdx;
+
+            lock (idxLock)
+            {
+                if ((idx < 0) || (idx >= tabPages.Length))
+                    throw new System.ArgumentException("idx");
+
+                if (currentIdx == idx)
+                    return;
+
+                currentIdx = idx;
+            }
+
+            if (oldIdx != currentIdx)
+            {
+                if (OnTabSelected != null)
+                    OnTabSelected.Invoke(currentIdx);
+            }
+        }
+
+        public void ShowNext()
+        {
+            lock (idxLock)
+            {
+                int newIdx = currentIdx + 1;
+                if (newIdx >= tabPages.Length)
+                    newIdx = 0;
+
+                ShowTab(newIdx);
+            }
+        }
+
+        public void ShowPrevious()
+        {
+            lock (idxLock)
+            {
+                int newIdx = currentIdx - 1;
+                if (newIdx < 0)
+                    newIdx = tabPages.Length - 1;
+
+                ShowTab(newIdx);
+            }
+        }
 
         private void Awake()
         {
@@ -46,16 +96,29 @@ namespace TLP.UI
             }
 
             // Show the first tab, no anim
-            tabPages[0].gameObject.SetActive(true);
-            for (int i=1; i<tabPages.Length; i++)
-                tabPages[i].gameObject.SetActive(false);
-
+            for (int i = 1; i < tabPages.Length; i++)
+                UIAnimator.Animate(tabPages[i], -1);
+            UIAnimator.Animate(tabPages[0], 1);
+            
             if (OnTabSelected != null)
                 OnTabSelected.Invoke(0);
         }
 
         private void Update()
         {
+            // Update tabs
+            lock (idxLock)
+            {
+                for (int i=0; i<tabPages.Length; i++)
+                {
+                    if (i == currentIdx)
+                        UIAnimator.Animate(tabPages[i], Time.unscaledDeltaTime);
+                    else
+                        UIAnimator.Animate(tabPages[i], -Time.unscaledDeltaTime);
+                }
+            }
+
+            // Prev/next
             if (WindowManager.Instance.HasPrevNextButtons())
             {
                 if (Input.GetButtonDown(WindowManager.Instance.PreviousUIButton))
@@ -63,99 +126,6 @@ namespace TLP.UI
                 if (Input.GetButtonDown(WindowManager.Instance.NextUIButton))
                     ShowNext();
             }
-        }
-
-        public void ShowTab(int idx)
-        {
-            if ((idx < 0) || (idx >= tabPages.Length))
-                throw new System.ArgumentException("idx");
-
-            if (transitionRoutine != null)
-                return;
-
-            if (currentIdx == idx)
-                return;
-
-            currentIdx = idx;
-
-            List<CanvasGroup> hideTabs = new List<CanvasGroup>();
-            for (int i = 0; i < currentIdx; i++)
-            {
-                if (tabPages[i].gameObject.activeSelf)
-                    hideTabs.Add(tabPages[i]);
-            }
-            for (int i = currentIdx + 1; i < tabPages.Length; i++)
-            {
-                if (tabPages[i].gameObject.activeSelf)
-                    hideTabs.Add(tabPages[i]);
-            }
-
-            if ((toggles != null) && (toggles.Length > currentIdx))
-                toggles[currentIdx].isOn = true;
-
-            if ((hideTabs.Count == 0) && tabPages[currentIdx].gameObject.activeSelf)
-                return;
-
-            transitionRoutine = StartCoroutine(Transition(hideTabs, tabPages[currentIdx]));
-
-            if (OnTabSelected != null)
-                OnTabSelected.Invoke(currentIdx);
-        }
-
-        public void ShowNext()
-        {
-            int newIdx = currentIdx + 1;
-            if (newIdx >= tabPages.Length)
-                newIdx = 0;
-
-            ShowTab(newIdx);
-        }
-
-        public void ShowPrevious()
-        {
-            int newIdx = currentIdx - 1;
-            if (newIdx < 0)
-                newIdx = tabPages.Length - 1;
-
-            ShowTab(newIdx);
-        }
-        
-        private IEnumerator Transition(List<CanvasGroup> hideTabs, CanvasGroup showTab)
-        {
-            Coroutine lastHideRoutine = null;
-            if (hideTabs.Count > 0)
-            {
-                foreach (var group in hideTabs)
-                {
-                    lastHideRoutine = StartCoroutine(WindowAnimator.Animate(
-                        group,
-                        group.GetComponent<RectTransform>(),
-                        (useDefaultTransition ? WindowManager.Instance.DefaultTransition : customTransition),
-                        true
-                    ));
-                }
-
-                yield return lastHideRoutine;
-
-                foreach (var group in hideTabs)
-                {
-                    group.gameObject.SetActive(false);
-                }
-            }
-
-            if (!showTab.gameObject.activeSelf)
-            {
-                showTab.gameObject.SetActive(true);
-
-                yield return StartCoroutine(WindowAnimator.Animate(
-                    showTab,
-                    showTab.GetComponent<RectTransform>(),
-                    (useDefaultTransition ? WindowManager.Instance.DefaultTransition : customTransition),
-                    false
-                ));
-            }
-
-            transitionRoutine = null;
         }
 
         private void ValidateToggleGroup()

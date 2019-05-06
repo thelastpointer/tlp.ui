@@ -3,7 +3,7 @@
 namespace TLP.UI
 {
     [System.Serializable]
-    public class WindowTransition
+    public class UIAnimation
     {
         public TransitionType Type = TransitionType.Fade;
         public float Duration = 0.1f;
