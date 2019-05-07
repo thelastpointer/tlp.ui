@@ -21,8 +21,6 @@ namespace TLP.UI
         public UnityEvent OnActivated;
         public UnityEvent OnDeactivated;
 
-        public UnityEvent OnWillActivate;
-        
         public UnityEvent OnNextWindow;
         public UnityEvent OnPreviousWindow;
 

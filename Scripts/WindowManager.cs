@@ -99,9 +99,6 @@ namespace TLP.UI
             {
                 if ((previousWindow != null) && (previousWindow.OnDeactivated != null))
                     previousWindow.OnDeactivated.Invoke();
-
-                if (windowStack[windowStack.Count - 1].OnWillActivate != null)
-                    windowStack[windowStack.Count - 1].OnWillActivate.Invoke();
             }
         }
         public void Close(string id)
@@ -286,6 +283,9 @@ namespace TLP.UI
                 }
 
                 currentTopWindow = top;
+
+                if ((currentTopWindow != null) && (currentTopWindow.OnActivated != null))
+                    currentTopWindow.OnActivated.Invoke();
             }
 
             // Play changed sound when the current selection changed

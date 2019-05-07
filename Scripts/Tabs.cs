@@ -112,9 +112,17 @@ namespace TLP.UI
                 for (int i=0; i<tabPages.Length; i++)
                 {
                     if (i == currentIdx)
+                    {
+                        tabPages[i].gameObject.SetActive(true);
                         UIAnimator.Animate(tabPages[i], Time.unscaledDeltaTime);
+                    }
                     else
-                        UIAnimator.Animate(tabPages[i], -Time.unscaledDeltaTime);
+                    {
+                        if (tabPages[i].AnimationProgress <= 0)
+                            tabPages[i].gameObject.SetActive(false);
+                        else
+                            UIAnimator.Animate(tabPages[i], -Time.unscaledDeltaTime);
+                    }
                 }
             }
 
