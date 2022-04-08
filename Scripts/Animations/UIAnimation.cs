@@ -5,6 +5,24 @@ namespace TLP.UI
     [System.Serializable]
     public class UIAnimation
     {
+        // Fade + Move + Scale
+        //      use DOTween?
+        //      custom animation?
+
+        /*
+        plan:
+            this should be a single coroutine that runs on the WindowManager
+            a window can only have a single animation running at the same time
+            callbacks?
+                SHOW() -> Callback() -> Anim()
+                HIDE() -> Anim() -> Callback()
+            eh this class doesn't concern itself with this. have an onStart() and onEnd()
+        */
+
+        /*
+            animations to be saved as scriptableobjects for easier sharing?
+        */
+
         public TransitionType Type = TransitionType.Fade;
         public float Duration = 0.1f;
         public float Strength = 200f;

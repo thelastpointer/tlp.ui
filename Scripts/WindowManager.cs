@@ -21,19 +21,21 @@ namespace TLP.UI
 
 #pragma warning disable 0649
 
-        [Header("Default Transition")]
-        [SerializeField] private UIAnimation defaultTransition;
+        //[Header("Default Transition")]
+        //[SerializeField] private UIAnimation defaultTransition;
 
         [Header("Auto-registered windows")]
         [SerializeField] private Window[] autoRegisteredWindows;
 
         [Header("Audio")]
         [SerializeField] private AudioSource audioSource;
+        /*
         [SerializeField] private AudioClip windowShowSound;
         [SerializeField] private AudioClip windowHideSound;
         [SerializeField] private AudioClip submitSound;
         [SerializeField] private AudioClip cancelSound;
         [SerializeField] private AudioClip selectionChangedSound;
+        */
 
         [Header("Controller Settings")]
         public bool UseController = false;
@@ -42,7 +44,7 @@ namespace TLP.UI
 
         [Header("Callbacks")]
         public UnityEvent OnStart;
-        //public UnityEvent OnWindowShown;
+        public UnityEvent OnTopWindowChanged;
 
 #pragma warning restore 0649
 
@@ -50,9 +52,17 @@ namespace TLP.UI
 
         #region Public stuff
 
-        // Getters
+        public Layer GetLayer(string id) { return null; }
+        public Window GetWindow(string id) { return null; }
+
+        
+        // Get the Window that was activated last
         public Window CurrentWindow { get { return (windowStack.Count == 0 ? null : windowStack[windowStack.Count - 1]); } }
-        public UIAnimation DefaultTransition { get { return defaultTransition; } }
+        // Top layer, top window
+        public Window TopWindow { get { return null; } }
+        public Window[] GetActiveWindows() { return null; }
+
+        //public UIAnimation DefaultTransition { get { return defaultTransition; } }
 
         /// <summary>
         /// Schedule the window for display.
@@ -155,6 +165,7 @@ namespace TLP.UI
 
         public static void PlaySound(Sound sound)
         {
+            /*
             if (Instance.audioSource != null)
             {
                 AudioClip clip = null;
@@ -183,6 +194,7 @@ namespace TLP.UI
                 if (clip != null)
                     Instance.audioSource.PlayOneShot(clip);
             }
+            */
         }
 
         public bool HasPrevNextButtons()
@@ -196,7 +208,8 @@ namespace TLP.UI
 
         private Dictionary<string, Window> registeredWindows = new Dictionary<string, Window>();
         private object windowStackLock = new object();
-        private List<Window> windowStack = new List<Window>();
+        private readonly List<Layer> layerStack = new List<Layer>();
+        //private List<Window> windowStack = new List<Window>();
         private Window currentTopWindow;
 
         private GameObject selectedUIObject;
@@ -242,7 +255,7 @@ namespace TLP.UI
                 {
                     top = windowStack[windowStack.Count - 1];
                     top.gameObject.SetActive(true);
-                    UIAnimator.Animate(top, Time.unscaledDeltaTime);
+                    //UIAnimator.Animate(top, Time.unscaledDeltaTime);
                 }
 
                 // All other windows should be hidden
@@ -250,8 +263,9 @@ namespace TLP.UI
                 {
                     if (wnd != top)
                     {
+                        /*
                         UIAnimator.Animate(wnd, -Time.unscaledDeltaTime);
-                        if (wnd.AnimationProgress == 0)
+                        if (wnd.AnimationProgress == 0)*/
                             wnd.gameObject.SetActive(false);
                     }
                 }

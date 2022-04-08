@@ -5,7 +5,7 @@ using UnityEngine.UI;
 namespace TLP.UI
 {
     [RequireComponent(typeof(CanvasGroup))]
-    public class Window : AnimatedPanel
+    public class Window : MonoBehaviour
     {
 #pragma warning disable 0649
         [SerializeField] private string windowID;
@@ -21,8 +21,12 @@ namespace TLP.UI
         public UnityEvent OnActivated;
         public UnityEvent OnDeactivated;
 
+        //OnShow, OnHide
         public UnityEvent OnNextWindow;
         public UnityEvent OnPreviousWindow;
+
+        
+        //MoveUp, MoveDown
 
         public void ShowWindow(string id)
         {
@@ -33,10 +37,8 @@ namespace TLP.UI
             WindowManager.Instance.Back();
         }
 
-        protected override void Start()
+        protected void Start()
         {
-            base.Start();
-
             if (string.IsNullOrEmpty(windowID))
                 Debug.LogWarning("Warning: window has no ID, this is probably unintended!", gameObject);
             else
