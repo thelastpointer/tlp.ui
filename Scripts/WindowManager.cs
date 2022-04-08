@@ -52,15 +52,20 @@ namespace TLP.UI
 
         #region Public stuff
 
+        public Layer CreateLayer(string id, int order) { return null; }
         public Layer GetLayer(string id) { return null; }
-        public Window GetWindow(string id) { return null; }
 
-        
+        private Window lastActivated;
+
         // Get the Window that was activated last
-        public Window CurrentWindow { get { return (windowStack.Count == 0 ? null : windowStack[windowStack.Count - 1]); } }
+        //public Window CurrentWindow { get { return (windowStack.Count == 0 ? null : windowStack[windowStack.Count - 1]); } }
+        public Window CurrentWindow => lastActivated;
+
         // Top layer, top window
         public Window TopWindow { get { return null; } }
         public Window[] GetActiveWindows() { return null; }
+
+
 
         //public UIAnimation DefaultTransition { get { return defaultTransition; } }
 
