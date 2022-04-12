@@ -8,15 +8,20 @@ namespace TLP.UI
     public class Window : MonoBehaviour
     {
 #pragma warning disable 0649
+
         [SerializeField] private string windowID;
+        [SerializeField] private string preferredLayer;
+
         [SerializeField] private Selectable firstControl;
-        [SerializeField] private Transform backgroundDenier;
+
 #pragma warning restore 0649
 
-        public string ID { get { return windowID; } }
+        public string ID => windowID;
+        public Layer CurrentLayer;
 
-        public Selectable FirstControl { get { return firstControl; } }
-        public Transform BackgroundDenier { get { return backgroundDenier; } }
+        public string PreferredLayer => preferredLayer;
+
+        public Selectable FirstControl => firstControl;
         
         public UnityEvent OnActivated;
         public UnityEvent OnDeactivated;

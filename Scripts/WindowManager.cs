@@ -10,7 +10,7 @@ using UnityEditor;
 namespace TLP.UI
 {
     /// <summary>
-    /// Manages UI Windows. Only one window and one popup may active at any time!
+    /// Manages UI Windows
     /// </summary>
     public class WindowManager : MonoBehaviour
     {
@@ -20,9 +20,6 @@ namespace TLP.UI
         #region Editor-assigned fields
 
 #pragma warning disable 0649
-
-        //[Header("Default Transition")]
-        //[SerializeField] private UIAnimation defaultTransition;
 
         [Header("Auto-registered windows")]
         [SerializeField] private Window[] autoRegisteredWindows;
@@ -50,22 +47,24 @@ namespace TLP.UI
 
         #endregion
 
-        #region Public stuff
-
         public Layer CreateLayer(string id, int order) { return null; }
-        public Layer GetLayer(string id) { return null; }
+        public Layer GetLayer(string layerName)
+        {
+            throw new System.ArgumentException("No layer registered as " + layerName);
+            return null;
+        }
 
         private Window lastActivated;
 
         // Get the Window that was activated last
-        //public Window CurrentWindow { get { return (windowStack.Count == 0 ? null : windowStack[windowStack.Count - 1]); } }
-        public Window CurrentWindow => lastActivated;
+        public Window LastActivatedWindow => lastActivated;
 
         // Top layer, top window
         public Window TopWindow { get { return null; } }
+
         public Window[] GetActiveWindows() { return null; }
 
-
+        public Layer DefaultLayer => null;
 
         //public UIAnimation DefaultTransition { get { return defaultTransition; } }
 
@@ -73,15 +72,70 @@ namespace TLP.UI
         /// Schedule the window for display.
         /// </summary>
         /// <param name="id">The window must be registered with this ID. Case-sensitive.</param>
-        public void ShowWindow(string id)
+        public void ShowWindow(string name)
         {
+            string explicitLayerName;
+            string windowName;
+            SplitWindowPath(name, out explicitLayerName, out windowName);
+
+            Window window = GetWindow(windowName);
+
             // Unknown window
-            if (!registeredWindows.ContainsKey(id))
-                throw new System.ArgumentException("id");
+            if (window == null)
+                throw new System.ArgumentException("No window registered as " + windowName);
 
-            Window previousWindow = null;
+            lock (windowChangeLock)
+            {
+                // Resolve layer
+                //      if explicitly specified, force that
+                //      if not specified, use current layer
+                //      if no current layer:
+                //          check if window has a *layer preference*
+                //          if not, use default
+                Layer layer;
+                if (!string.IsNullOrEmpty(explicitLayerName))
+                {
+                    layer = GetLayer(explicitLayerName);
+                }
+                else
+                {
+                    layer = window.CurrentLayer;
 
-            lock (windowStackLock)
+                    if (layer == null)
+                    {
+                        if (!string.IsNullOrEmpty(window.PreferredLayer))
+                        {
+                            layer = GetLayer(window.PreferredLayer);
+                        }
+                        else
+                        {
+                            layer = DefaultLayer;
+                        }
+                    }
+                }
+
+                // Add to layer for the first time
+                if (window.CurrentLayer == null)
+                {
+                    layer.AddWindow(window);
+                    window.CurrentLayer = layer;
+                }
+                // Move between layers
+                else if (layer != window.CurrentLayer)
+                {
+                    window.CurrentLayer.RemoveWindow(window);
+                    layer.AddWindow(window);
+                    window.CurrentLayer = layer;
+
+                    // TODO: Any events for this? Not sure if needed
+                }
+
+                // Pass window to layer (it will decide what happens, modal, bring to front, etc)
+                layer.ShowWindow(window);
+            }
+
+            /*
+            lock (windowChangeLock)
             {
                 if (windowStack.Count > 0)
                 {
@@ -115,32 +169,32 @@ namespace TLP.UI
                 if ((previousWindow != null) && (previousWindow.OnDeactivated != null))
                     previousWindow.OnDeactivated.Invoke();
             }
+            */
         }
-        public void Close(string id)
-        {
-            lock (windowStackLock)
-            {
-                // If this is the top window, remove it from the stack
-                if ((windowStack.Count > 0) && (windowStack[windowStack.Count - 1].ID == id))
-                    windowStack.RemoveAt(windowStack.Count - 1);
 
-                // ...it is already being hidden otherwise
+        public void CloseWindow(string id)
+        {
+            // TODO: If layer specified, close ONLY if on the correct layer
+            // OR: Just fucking ignore the layer bruh
+            Window window = GetWindow(id);
+            lock (windowChangeLock)
+            {
+                window.CurrentLayer.CloseWindow(window);
             }
         }
+
         public void Back()
         {
-            lock (windowStackLock)
+            lock (windowChangeLock)
             {
-                // Remove top window from the stack
-                if (windowStack.Count > 0)
-                    windowStack.RemoveAt(windowStack.Count - 1);
+                LastActivatedWindow.CurrentLayer.Back();
             }
         }
-        public void ClearAll()
+
+        public void UnregisterAll()
         {
             foreach (var wnd in registeredWindows.Values)
                 wnd.gameObject.SetActive(false);
-            windowStack.Clear();
         }
 
         public void RegisterWindow(Window wnd, string id)
@@ -153,11 +207,15 @@ namespace TLP.UI
 
         public Window GetWindow(string id)
         {
-            if (registeredWindows.ContainsKey(id))
-                return registeredWindows[id];
+            if (registeredWindows.TryGetValue(id, out Window result))
+            {
+                return result;
+            }
+
             return null;
         }
 
+        /*
         // Sound
         public enum Sound
         {
@@ -167,10 +225,9 @@ namespace TLP.UI
             Cancel,
             SelectionChanged
         }
-
+        
         public static void PlaySound(Sound sound)
         {
-            /*
             if (Instance.audioSource != null)
             {
                 AudioClip clip = null;
@@ -199,24 +256,20 @@ namespace TLP.UI
                 if (clip != null)
                     Instance.audioSource.PlayOneShot(clip);
             }
-            */
         }
+        */
 
         public bool HasPrevNextButtons()
         {
             return (!string.IsNullOrEmpty(PreviousUIButton) && !string.IsNullOrEmpty(NextUIButton));
         }
 
-        #endregion
-
-        #region Internals
-
         private Dictionary<string, Window> registeredWindows = new Dictionary<string, Window>();
-        private object windowStackLock = new object();
-        private readonly List<Layer> layerStack = new List<Layer>();
-        //private List<Window> windowStack = new List<Window>();
-        private Window currentTopWindow;
 
+        private object windowChangeLock = new object();
+        private readonly List<Layer> layerStack = new List<Layer>();
+
+        private Window currentTopWindow;
         private GameObject selectedUIObject;
 
         private void Awake()
@@ -250,10 +303,10 @@ namespace TLP.UI
 
         private void Update()
         {
-            Window top = null;
-
+            //Window top = null;
+            /*
             // Update window showing/hiding
-            lock (windowStackLock)
+            lock (windowChangeLock)
             {
                 // Always try to show the top window
                 if (windowStack.Count > 0)
@@ -268,14 +321,13 @@ namespace TLP.UI
                 {
                     if (wnd != top)
                     {
-                        /*
-                        UIAnimator.Animate(wnd, -Time.unscaledDeltaTime);
-                        if (wnd.AnimationProgress == 0)*/
+                        //UIAnimator.Animate(wnd, -Time.unscaledDeltaTime);
+                        //if (wnd.AnimationProgress == 0)
                             wnd.gameObject.SetActive(false);
                     }
                 }
             }
-
+            
             // Update background deniers
             if (top != currentTopWindow)
             {
@@ -306,7 +358,8 @@ namespace TLP.UI
                 if ((currentTopWindow != null) && (currentTopWindow.OnActivated != null))
                     currentTopWindow.OnActivated.Invoke();
             }
-
+            */
+            /*
             // Play changed sound when the current selection changed
             if ((audioSource != null) && (selectionChangedSound != null))
             {
@@ -326,12 +379,41 @@ namespace TLP.UI
                 if (Input.GetButtonDown(NextUIButton) && (CurrentWindow.OnNextWindow != null))
                     CurrentWindow.OnNextWindow.Invoke();
             }
-
+            */
         }
 
         private void Reset()
         {
             audioSource = GetComponent<AudioSource>();
+        }
+
+        public const char LayerSeparator = '/';
+
+        public static string SanitizeName(string value)
+        {
+            return value.ToLowerInvariant();
+        }
+
+        /// <summary>
+        /// REM: names are sanitized
+        /// </summary>
+        /// <param name="compositeName"></param>
+        /// <param name="layerName"></param>
+        /// <param name="windowName"></param>
+        private static void SplitWindowPath(string compositeName, out string layerName, out string windowName)
+        {
+            compositeName = SanitizeName(compositeName);
+
+            int idx = compositeName.IndexOf(LayerSeparator);
+            if (idx != -1)
+            {
+                layerName = compositeName.Substring(0, idx);
+                windowName = compositeName.Substring(idx + 1);
+                return;
+            }
+
+            layerName = "";
+            windowName = compositeName;
         }
 
 #if UNITY_EDITOR
@@ -341,7 +423,6 @@ namespace TLP.UI
         }
 #endif
 
-#endregion
     }
 }
 
