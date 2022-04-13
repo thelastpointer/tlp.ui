@@ -1,14 +1,16 @@
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
 namespace TLP.UI
 {
-    [System.Serializable]
-    public class Layer
+    
+    public class Layer : MonoBehaviour
     {
         public string ID;
         public int Order;
+
+        // TODO: Sorting is based on Canvas Hierarchy or a custom number?
+        // custom number ofc because it's easier
 
         // "Modal" or "Stack"? "SingleWindow"? how the fuck would I call it when there's always only one window open?
         public bool Stacked = false;
@@ -26,6 +28,9 @@ namespace TLP.UI
 
         public void ShowWindow(Window window)
         {
+            // If stacked -- bring this window to front and hide all others
+            // If not -- bring this window to front
+
             Window previousWindow = null;
 
             if (windowStack.Count > 0)

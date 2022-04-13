@@ -22,25 +22,38 @@ namespace TLP.UI
         public string PreferredLayer => preferredLayer;
 
         public Selectable FirstControl => firstControl;
+
+
+        public int OrderInLayer => -1;
         
+        /// <summary>
+        /// Window becomes the topmost window on its layer.
+        /// </summary>
         public UnityEvent OnActivated;
+        // Window is not topmost anymore.
         public UnityEvent OnDeactivated;
 
-        //OnShow, OnHide
-        public UnityEvent OnNextWindow;
-        public UnityEvent OnPreviousWindow;
+        public UnityEvent OnShow;
+        public UnityEvent OnHide;
 
-        
+        //OnShow, OnHide
+        //public UnityEvent OnNextWindow;
+        //public UnityEvent OnPreviousWindow;
+
         //MoveUp, MoveDown
 
-        public void ShowWindow(string id)
+        public void Show()
         {
-            WindowManager.Instance.ShowWindow(id);
+            // Show THIS window
+            WindowManager.Instance.ShowWindow(windowID);
         }
+        /*
+        // Back, or close current window
         public void Back()
         {
             WindowManager.Instance.Back();
         }
+        */
 
         protected void Start()
         {

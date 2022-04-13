@@ -2,6 +2,7 @@
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.EventSystems;
+using UnityEngine.UI;
 
 #if UNITY_EDITOR
 using UnityEditor;
@@ -24,6 +25,10 @@ namespace TLP.UI
         [Header("Auto-registered windows")]
         [SerializeField] private Window[] autoRegisteredWindows;
 
+        [Header("Layers")]
+        [SerializeField] private bool createMissingLayers = false;
+        [SerializeField] private string[] autoCreatedLayers;
+        
         [Header("Audio")]
         [SerializeField] private AudioSource audioSource;
         /*
@@ -47,11 +52,13 @@ namespace TLP.UI
 
         #endregion
 
-        public Layer CreateLayer(string id, int order) { return null; }
-        public Layer GetLayer(string layerName)
+        //public Layer CreateLayer(string id, int order) { return null; }
+        public Layer GetLayer(string id)
         {
-            throw new System.ArgumentException("No layer registered as " + layerName);
-            return null;
+            if (layers.TryGetValue(SanitizeID(id), out Layer result))
+                return result;
+
+            throw new System.ArgumentException("No layer registered as " + id);
         }
 
         private Window lastActivated;
@@ -72,11 +79,11 @@ namespace TLP.UI
         /// Schedule the window for display.
         /// </summary>
         /// <param name="id">The window must be registered with this ID. Case-sensitive.</param>
-        public void ShowWindow(string name)
+        public void ShowWindow(string id)
         {
             string explicitLayerName;
             string windowName;
-            SplitWindowPath(name, out explicitLayerName, out windowName);
+            SplitWindowPath(id, out explicitLayerName, out windowName);
 
             Window window = GetWindow(windowName);
 
@@ -174,6 +181,8 @@ namespace TLP.UI
 
         public void CloseWindow(string id)
         {
+            id = SanitizeID(id);
+
             // TODO: If layer specified, close ONLY if on the correct layer
             // OR: Just fucking ignore the layer bruh
             Window window = GetWindow(id);
@@ -199,6 +208,8 @@ namespace TLP.UI
 
         public void RegisterWindow(Window wnd, string id)
         {
+            id = SanitizeID(id);
+
             // Check for unintended overwrites
             if (registeredWindows.ContainsKey(id) && (registeredWindows[id] != wnd))
                 Debug.LogError("Warning: window \"" + id + "\" overridden! This is probably unintended behaviour.\nPrevious: " + registeredWindows[id].name + "\nNew: " + wnd.name, registeredWindows[id].gameObject);
@@ -207,6 +218,8 @@ namespace TLP.UI
 
         public Window GetWindow(string id)
         {
+            id = SanitizeID(id);
+
             if (registeredWindows.TryGetValue(id, out Window result))
             {
                 return result;
@@ -267,10 +280,30 @@ namespace TLP.UI
         private Dictionary<string, Window> registeredWindows = new Dictionary<string, Window>();
 
         private object windowChangeLock = new object();
-        private readonly List<Layer> layerStack = new List<Layer>();
+
+        // TODO: Is each layer a spearate canvas, or separate transform?
+        private readonly Dictionary<string, Layer> layers = new Dictionary<string, Layer>();
 
         private Window currentTopWindow;
         private GameObject selectedUIObject;
+
+        private void Setup()
+        {
+            // TODO: Find child layers and register them
+            foreach (var layer in gameObject.GetComponentsInChildren<Layer>())
+            {
+                
+            }
+
+            // TODO: Create layers from preCreatedLayers
+            foreach (var layer in autoCreatedLayers)
+            {
+                CreateLayer(layer);
+            }
+
+            foreach (var wnd in autoRegisteredWindows)
+                RegisterWindow(wnd, wnd.ID);
+        }
 
         private void Awake()
         {
@@ -280,8 +313,7 @@ namespace TLP.UI
 
                 DontDestroyOnLoad(gameObject);
 
-                foreach (var wnd in autoRegisteredWindows)
-                    RegisterWindow(wnd, wnd.ID);
+                Setup();
             }
             else
             {
@@ -294,6 +326,7 @@ namespace TLP.UI
         {
             if (Instance == this)
             {
+                // NOTE: Controller support means that a window gets its first control selected by default
                 // Enable controller support if there's a joystick connected
                 UseController = (Input.GetJoystickNames().Length > 0);
 
@@ -387,11 +420,57 @@ namespace TLP.UI
             audioSource = GetComponent<AudioSource>();
         }
 
+        private void AddLayer(Layer layer)
+        {
+            string id = SanitizeID(layer.ID);
+
+            if (layers.TryGetValue(layer.ID, out Layer existingLayer))
+            {
+                if (layer != existingLayer)
+                {
+                    throw new System.ArgumentException("Layer " + existingLayer.ID + " already exists, cannot add twice");
+                }
+            }
+            else
+            {
+                // TODO: Move to correct order?
+                layers[id] = layer;
+            }
+        }
+
+        private Layer CreateLayer(string name)
+        {
+            name = SanitizeID(name);
+
+            // If layer already exists, return it
+            if (layers.TryGetValue(name, out Layer result))
+                return result;
+
+            GameObject go = new GameObject("Layer-" + name);
+            go.transform.SetParent(transform);
+            go.transform.localScale = Vector3.one;
+            go.transform.localPosition = Vector3.zero;
+
+            var canvas = go.AddComponent<Canvas>();
+            canvas.overrideSorting = true;
+            canvas.sortingOrder = 0;
+
+            var raycaster = go.AddComponent<GraphicRaycaster>();
+
+            var canvasGroup = go.AddComponent<CanvasGroup>();
+
+            var layer = go.AddComponent<Layer>();
+
+            return layer;
+        }
+
         public const char LayerSeparator = '/';
 
-        public static string SanitizeName(string value)
+        // TODO: Maybe fuck this? Just inserting possible extra GC for almost every use case?
+        public static string SanitizeID(string value)
         {
-            return value.ToLowerInvariant();
+            //return value.ToLowerInvariant();
+            return value;
         }
 
         /// <summary>
@@ -402,7 +481,7 @@ namespace TLP.UI
         /// <param name="windowName"></param>
         private static void SplitWindowPath(string compositeName, out string layerName, out string windowName)
         {
-            compositeName = SanitizeName(compositeName);
+            compositeName = SanitizeID(compositeName);
 
             int idx = compositeName.IndexOf(LayerSeparator);
             if (idx != -1)
