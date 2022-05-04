@@ -3,7 +3,6 @@ using UnityEngine;
 
 namespace TLP.UI
 {
-    
     public class Layer : MonoBehaviour
     {
         public string ID;
@@ -16,7 +15,7 @@ namespace TLP.UI
         public bool Stacked = false;
 
         // Visible windows in this layer
-        private List<Window> windows;
+        //private List<Window> windows;
 
         public void ShowLayer(bool show) { }
         public void EnableLayer(bool enabled) { }
@@ -24,7 +23,7 @@ namespace TLP.UI
         public void SetOrder() { }
         //MoveUp? MoveDown? Move these to WindowManager?
 
-        private List<Window> windowStack;
+        private List<Window> windowStack = new List<Window>();
 
         public void ShowWindow(Window window)
         {
@@ -84,12 +83,18 @@ namespace TLP.UI
 
         public void AddWindow(Window window)
         {
-            //if (!windowStack.Contains(window))
-            //    windowStack.Add(window);
+            if (!windowStack.Contains(window))
+            {
+                windowStack.Add(window);
+
+                window.transform.SetParent(this.transform);
+                window.transform.SetAsLastSibling();
+            }
         }
         public void RemoveWindow(Window window)
         {
-            //windowStack.Remove(window);
+            if (windowStack.Contains(window))
+                windowStack.Remove(window);
         }
     }
 }

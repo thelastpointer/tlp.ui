@@ -17,6 +17,8 @@ namespace TLP.UI
 #pragma warning restore 0649
 
         public string ID => windowID;
+
+        // TODO: Replace with readonly prop and SetCurrentLayer
         public Layer CurrentLayer;
 
         public string PreferredLayer => preferredLayer;
@@ -35,6 +37,8 @@ namespace TLP.UI
 
         public UnityEvent OnShow;
         public UnityEvent OnHide;
+
+        //public UnityEvent OnLayerChanged;
 
         //OnShow, OnHide
         //public UnityEvent OnNextWindow;

@@ -27,6 +27,7 @@ namespace TLP.UI
 
         [Header("Layers")]
         [SerializeField] private bool createMissingLayers = false;
+        [SerializeField] private string defaultLayer = "";
         [SerializeField] private string[] autoCreatedLayers;
         
         [Header("Audio")]
@@ -58,7 +59,15 @@ namespace TLP.UI
             if (layers.TryGetValue(SanitizeID(id), out Layer result))
                 return result;
 
-            throw new System.ArgumentException("No layer registered as " + id);
+            return null;
+
+            // TODO: Why would this throw
+            //throw new System.ArgumentException("No layer registered as " + id);
+        }
+
+        public bool LayerExists(string id)
+        {
+            return layers.ContainsKey(SanitizeID(id));
         }
 
         private Window lastActivated;
@@ -71,7 +80,7 @@ namespace TLP.UI
 
         public Window[] GetActiveWindows() { return null; }
 
-        public Layer DefaultLayer => null;
+        public Layer DefaultLayer { get; private set; }
 
         //public UIAnimation DefaultTransition { get { return defaultTransition; } }
 
@@ -281,7 +290,6 @@ namespace TLP.UI
 
         private object windowChangeLock = new object();
 
-        // TODO: Is each layer a spearate canvas, or separate transform?
         private readonly Dictionary<string, Layer> layers = new Dictionary<string, Layer>();
 
         private Window currentTopWindow;
@@ -289,20 +297,144 @@ namespace TLP.UI
 
         private void Setup()
         {
-            // TODO: Find child layers and register them
-            foreach (var layer in gameObject.GetComponentsInChildren<Layer>())
+            lock (windowChangeLock)
             {
-                
+                // Find child layers and register them
+                foreach (var layer in gameObject.GetComponentsInChildren<Layer>())
+                {
+                    AddLayer(layer);
+                }
+
+                // Create layers from preCreatedLayers
+                foreach (var layer in autoCreatedLayers)
+                {
+                    CreateLayer(layer);
+                }
+
+                // Create or assign default layer
+                if (!string.IsNullOrEmpty(defaultLayer))
+                {
+                    DefaultLayer = GetLayer(defaultLayer);
+                    if (DefaultLayer == null)
+                        DefaultLayer = CreateLayer(defaultLayer);
+                }
+
+                foreach (var wnd in autoRegisteredWindows)
+                {
+                    RegisterWindow(wnd, wnd.ID);
+
+                    // Add to correct layer
+                    AssignWindowDefaultLayer(wnd);
+                }
+            }
+        }
+
+        private Layer AssignWindowLayer(Window window, string explicitLayerName)
+        {
+            Layer newLayer = null;
+
+            if (string.IsNullOrEmpty(explicitLayerName))
+            {
+                // Fast quit if no assignment needed
+                if (window.CurrentLayer != null)
+                    return window.CurrentLayer;
+
+                // No previous layer, no specified layer -- move to default layer
+                newLayer = DefaultLayer;
+
+                // Default layer is null, throw
+                if (newLayer == null)
+                    throw new System.InvalidOperationException("Unable to resolve default layer for window \"" + window.ID + "\"");
+            }
+            else
+            {
+                // Try to find new layer
+                newLayer = GetLayer(explicitLayerName);
+
+                if (newLayer == null)
+                {
+                    // Create missing layer
+                    if (createMissingLayers)
+                    {
+                        newLayer = CreateLayer(explicitLayerName);
+                    }
+                    // No such layer and no permission to create it, throw
+                    else
+                        throw new System.InvalidOperationException("Trying to assign window \"" + window.ID + "\" to missing layer \"" + explicitLayerName + "\"");
+                }
             }
 
-            // TODO: Create layers from preCreatedLayers
-            foreach (var layer in autoCreatedLayers)
+            MoveWindowToLayer(window, newLayer);
+
+            return newLayer;
+        }
+
+        private Layer AssignWindowDefaultLayer(Window window)
+        {
+            // Resolve layer
+            //      return current if already resolved
+            //      if none, find preferred
+            //      if no preferred, use default
+            
+            if (window.CurrentLayer != null)
             {
-                CreateLayer(layer);
+                return window.CurrentLayer;
             }
 
-            foreach (var wnd in autoRegisteredWindows)
-                RegisterWindow(wnd, wnd.ID);
+            Layer layer = null;
+
+            if (!string.IsNullOrEmpty(window.PreferredLayer))
+            {
+                layer = GetLayer(window.PreferredLayer);
+                if (layer == null)
+                {
+                    if (createMissingLayers)
+                    {
+                        layer = CreateLayer(window.PreferredLayer);
+                    }
+                    else
+                    {
+                        layer = DefaultLayer;
+                    }
+                }
+            }
+
+            if (layer == null)
+            {
+                layer = DefaultLayer;
+            }
+
+            if (layer == null)
+            {
+                throw new System.InvalidOperationException("Unable to resolve default layer for window \"" + window.ID + "\"");
+            }
+
+            MoveWindowToLayer(window, layer);
+
+            return layer;
+        }
+
+        private void MoveWindowToLayer(Window window, Layer newLayer)
+        {
+            if (window == null)
+                throw new System.ArgumentNullException("window");
+
+            if (newLayer == null)
+                throw new System.ArgumentNullException("newLayer");
+
+            // Add to layer for the first time
+            if (window.CurrentLayer == null)
+            {
+                newLayer.AddWindow(window);
+                window.CurrentLayer = newLayer;
+            }
+            // Move between layers
+            else if (newLayer != window.CurrentLayer)
+            {
+                window.CurrentLayer.RemoveWindow(window);
+                newLayer.AddWindow(window);
+                window.CurrentLayer = newLayer;
+            }
         }
 
         private void Awake()
@@ -424,11 +556,11 @@ namespace TLP.UI
         {
             string id = SanitizeID(layer.ID);
 
-            if (layers.TryGetValue(layer.ID, out Layer existingLayer))
+            if (layers.TryGetValue(id, out Layer existingLayer))
             {
                 if (layer != existingLayer)
                 {
-                    throw new System.ArgumentException("Layer " + existingLayer.ID + " already exists, cannot add twice");
+                    throw new System.InvalidOperationException("Trying to register two different layers with the same id: \"" + id + "\"");
                 }
             }
             else
@@ -460,6 +592,9 @@ namespace TLP.UI
             var canvasGroup = go.AddComponent<CanvasGroup>();
 
             var layer = go.AddComponent<Layer>();
+            layer.ID = name;
+
+            AddLayer(layer);
 
             return layer;
         }
