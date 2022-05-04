@@ -1,3 +1,12 @@
+////////////////////////////////////////
+
+elírt window layer
+	Add to existing (if there is one)
+	Create (if enabled)
+	Default (if specified)
+	throw
+
+////////////////////////////////////////
 void ShowErrorMessage()
 {
 	messagePanel.Text = errorMessage;
