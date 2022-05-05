@@ -3,15 +3,16 @@ using UnityEngine;
 
 namespace TLP.UI
 {
+    // TODO: Layer sorting order
+    //      Q: Sorting is based on Canvas Hierarchy or a custom number?
+    //      A: custom number ofc because it's easier
+    // TODO: Modal or Stack
     public class Layer : MonoBehaviour
     {
         public string ID;
         public int Order;
 
-        // TODO: Sorting is based on Canvas Hierarchy or a custom number?
-        // custom number ofc because it's easier
-
-        // "Modal" or "Stack"? "SingleWindow"? how the fuck would I call it when there's always only one window open?
+        // A stacked layer only ever displays one Window at most.
         public bool Stacked = false;
 
         // Visible windows in this layer

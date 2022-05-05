@@ -29,35 +29,35 @@ namespace TLP.UI
         public int OrderInLayer => -1;
         
         /// <summary>
-        /// Window becomes the topmost window on its layer.
+        /// Window order changed, becomes the topmost window on its layer.
         /// </summary>
         public UnityEvent OnActivated;
-        // Window is not topmost anymore.
+        /// <summary>
+        /// Window order changed, window is not on top anymore.
+        /// </summary>
         public UnityEvent OnDeactivated;
 
+        /// <summary>
+        /// Window is shown, eg. its GameObject becomes activated.
+        /// </summary>
         public UnityEvent OnShow;
+        /// <summary>
+        /// Window is hidden, eg. its GameObject becomes deactivated.
+        /// </summary>
         public UnityEvent OnHide;
 
         //public UnityEvent OnLayerChanged;
-
-        //OnShow, OnHide
-        //public UnityEvent OnNextWindow;
-        //public UnityEvent OnPreviousWindow;
-
-        //MoveUp, MoveDown
 
         public void Show()
         {
             // Show THIS window
             WindowManager.Instance.ShowWindow(windowID);
         }
-        /*
-        // Back, or close current window
-        public void Back()
+        
+        public void Hide()
         {
-            WindowManager.Instance.Back();
+            throw new System.NotImplementedException();
         }
-        */
 
         protected void Start()
         {

@@ -1,44 +1,38 @@
-# TLP.UI.Details
+# TLP.UI
 
-Okay, so here's what you need to know.
+Okay, so here's what you need to know. This thing is not that complex, so you can jump right to [Usage](#usage) and hopefully you'll be able to follow along easily. There are, however, some things that you'd better know about, so read all of this if possible.
 
-## Basics
+# Overview
 
 The WindowManager class handles all windows. It is a singleton -- you can access it with the static `WindowManager.Instance` property. Only the first instance is valid, if you have any more, they will destroy themselves.
 
-All windows have a Window component. Windows are identified by their `windowID`, which is a string.
+The ```WindowManager``` contains ```Layers```, ```Layers``` contain ```Windows```. Essentially, WindowManager manages everything, and Windows are grouped into Layers.
 
-Windows need to be registered. They register themselves at startup (in `Start()`) automatically, but of course this doesn't happen if the window is deactivated by default (as it usually is), so you can drag it into the WindowManager's "Auto-registered Windows" list to make sure they are registered correctly.
+All windows have a Window component. Windows are identified by their `ID`, which is a string. The same is true for ```Layers```.
 
-You can show a window by calling `WindowManager.Instance.ShowWindow(id)`. This will hide the current window and show the new one. You can go back by calling `WindowManager.Instance.Back()` -- this will hide the current window and show the previous one, if any.
+Windows need to be registered. They register themselves at startup (in `Start()`) automatically, but of course this doesn't happen if the window is deactivated by default (as it usually is), so the WindowManager can gather all Windows in a scene _in the editor_. To do this, select the WindowManager and click the "Register All Windows" button in the inspector.
 
-ShowWindow and Hide are defined in the Window class too, so for your button event handlers you can just refer to the containing Window. This is handy if you have Windows in multiple scenes.
+You can show a window by calling ```WindowManager.Instance.ShowWindow(id)```. 
+TODO: Fully qualify IDs like "layer/window"
+
+ShowWindow and Hide are defined in the Window class too, so for your button event handlers you can just refer to the containing Window. This is handy if you have Windows in multiple scenes and you don't have access to the WindowManager.
 
 Showing and hiding windows is a thread-safe operation.
 
-## Tabs
-Tabs show and hide tab pages, which are GameObjects with CanvasGroups (again for fading). To show a tab, call `ShowTab(idx)`. It supports Toggles to show tabs; assign a Toggle for each tab page to do that. Tabs will do the rest, including attaching a ToggleGroup and assigning event handlers.
+## Layers
 
-By default, tabs use the WindowManager's transition settings, but you can override them.
+creation
+in editor
+windowmanager.autocreate
 
-## Message boxes
-The MessageBoxes (which is, again, a singleton) shows and hides GameObjects, sets Text components and have callbacks when finished.
+## Windows
 
-They should ideally be on a separate Canvas, which has a higher Sort Order than the rest of the UI.
+creation
+show/hide
 
-These are intented to be called from code, so they will call a callback function once the user dismisses them. The messagebox functions are:
-* `ShowMessage` -- displays a message.
-* `ShowError` -- displays a message, _but is red_
-* `PromptYesNo` -- the user can choose between two buttons to proceed.
-* `PromptText` -- the user can enter a text here.
-* `ProgressModal` -- shows a text, sets the FillAmount of an Image (if assigned) and sets the value of a Slider (if assigned). Call this repeatedly to fill the progress bar.
-* `HideProgressModal` -- Hides the progress window. Don't forget to call this when finished!
-* `ShowProgressOverlay` -- displays a text, a Filled Image, and a Slider as an overlay. The user can use the rest of the UI normally. call this repeatedly.
-* `HideProgressOverlay` -- hides the progress overlay. Don't forget to call this when finished!
-* `ShowProgressInfinite` -- shows an infite loader. Use this when doing a lengthy operation with an unknown duration.
-* `HideProgressInfinite` -- hides the inifite loader.
+# Usage
 
-There's also a `WaitForModals()` function which calls a function as soon as all message boxes are hidden.
+## Tiling vs Stacked
 
 ## Transitions
 Transition define what happens when you change Windows or Tabs. All transition animations are hardcoded. The static WindowAnimator class implements these. The transitions fade a CanvasGroup and scale a RectTransform.

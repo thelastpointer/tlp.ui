@@ -46,7 +46,7 @@ namespace TLP.UI
         public string PreviousUIButton = "";
 
         [Header("Callbacks")]
-        public UnityEvent OnStart;
+        public UnityEvent OnReady;
         public UnityEvent OnTopWindowChanged;
 
 #pragma warning restore 0649
@@ -76,9 +76,9 @@ namespace TLP.UI
         public Window LastActivatedWindow => lastActivated;
 
         // Top layer, top window
-        public Window TopWindow { get { return null; } }
+        public Window TopWindow { get { throw new System.NotImplementedException(); } }
 
-        public Window[] GetActiveWindows() { return null; }
+        public Window[] GetActiveWindows() { throw new System.NotImplementedException(); }
 
         public Layer DefaultLayer { get; private set; }
 
@@ -149,43 +149,6 @@ namespace TLP.UI
                 // Pass window to layer (it will decide what happens, modal, bring to front, etc)
                 layer.ShowWindow(window);
             }
-
-            /*
-            lock (windowChangeLock)
-            {
-                if (windowStack.Count > 0)
-                {
-                    // Check if it's already at the top (== being shown)
-                    // Note: this also covers the case when it is the only window in the stack so we can safely remove stuff later
-                    if (windowStack[windowStack.Count - 1].ID == id)
-                        return;
-
-                    previousWindow = windowStack[windowStack.Count - 1];
-
-                    // Check if it's in the list
-                    for (int i = 0; i < windowStack.Count - 1; i++)
-                    {
-                        // If it's in, remove and push it to the top
-                        if (windowStack[i].ID == id)
-                        {
-                            windowStack.Add(windowStack[i]);
-                            windowStack.RemoveAt(i);
-                            return;
-                        }
-                    }
-                }
-
-                // No changes were made, so just add it to the top
-                windowStack.Add(registeredWindows[id]);
-            }
-
-            // Call events
-            if (previousWindow != windowStack[windowStack.Count - 1])
-            {
-                if ((previousWindow != null) && (previousWindow.OnDeactivated != null))
-                    previousWindow.OnDeactivated.Invoke();
-            }
-            */
         }
 
         public void CloseWindow(string id)
@@ -286,13 +249,11 @@ namespace TLP.UI
             return (!string.IsNullOrEmpty(PreviousUIButton) && !string.IsNullOrEmpty(NextUIButton));
         }
 
-        private Dictionary<string, Window> registeredWindows = new Dictionary<string, Window>();
-
-        private object windowChangeLock = new object();
-
+        private readonly Dictionary<string, Window> registeredWindows = new Dictionary<string, Window>();
         private readonly Dictionary<string, Layer> layers = new Dictionary<string, Layer>();
 
-        private Window currentTopWindow;
+        private readonly object windowChangeLock = new object();
+
         private GameObject selectedUIObject;
 
         private void Setup()
@@ -446,6 +407,8 @@ namespace TLP.UI
                 DontDestroyOnLoad(gameObject);
 
                 Setup();
+
+                OnReady?.Invoke();
             }
             else
             {
@@ -461,8 +424,6 @@ namespace TLP.UI
                 // NOTE: Controller support means that a window gets its first control selected by default
                 // Enable controller support if there's a joystick connected
                 UseController = (Input.GetJoystickNames().Length > 0);
-
-                OnStart.Invoke();
             }
         }
 
@@ -572,7 +533,7 @@ namespace TLP.UI.Editors
 
             base.OnInspectorGUI();
 
-            if (GUILayout.Button("Assign all Windows"))
+            if (GUILayout.Button("Register All Windows"))
             {
                 // Get all Window components in this scene
                 List<Window> windows = new List<Window>();
