@@ -11,7 +11,7 @@ using UnityEditor;
 namespace TLP.UI
 {
     /// <summary>
-    /// Manages UI Windows
+    /// Manages UI Windows.
     /// </summary>
     public class WindowManager : MonoBehaviour
     {
@@ -30,20 +30,8 @@ namespace TLP.UI
         [SerializeField] private string defaultLayer = "";
         [SerializeField] private string[] autoCreatedLayers;
         
-        [Header("Audio")]
-        [SerializeField] private AudioSource audioSource;
-        /*
-        [SerializeField] private AudioClip windowShowSound;
-        [SerializeField] private AudioClip windowHideSound;
-        [SerializeField] private AudioClip submitSound;
-        [SerializeField] private AudioClip cancelSound;
-        [SerializeField] private AudioClip selectionChangedSound;
-        */
-
         [Header("Controller Settings")]
         public bool UseController = false;
-        public string NextUIButton = "";
-        public string PreviousUIButton = "";
 
         [Header("Callbacks")]
         public UnityEvent OnReady;
@@ -53,36 +41,15 @@ namespace TLP.UI
 
         #endregion
 
-        //public Layer CreateLayer(string id, int order) { return null; }
-        public Layer GetLayer(string id)
-        {
-            if (layers.TryGetValue(SanitizeID(id), out Layer result))
-                return result;
-
-            return null;
-
-            // TODO: Why would this throw
-            //throw new System.ArgumentException("No layer registered as " + id);
-        }
-
-        public bool LayerExists(string id)
-        {
-            return layers.ContainsKey(SanitizeID(id));
-        }
-
-        private Window lastActivated;
+        #region Windows
 
         // Get the Window that was activated last
-        public Window LastActivatedWindow => lastActivated;
+        public Window LastShownWindow { get; private set; }
 
         // Top layer, top window
         public Window TopWindow { get { throw new System.NotImplementedException(); } }
 
         public Window[] GetActiveWindows() { throw new System.NotImplementedException(); }
-
-        public Layer DefaultLayer { get; private set; }
-
-        //public UIAnimation DefaultTransition { get { return defaultTransition; } }
 
         /// <summary>
         /// Schedule the window for display.
@@ -148,6 +115,7 @@ namespace TLP.UI
 
                 // Pass window to layer (it will decide what happens, modal, bring to front, etc)
                 layer.ShowWindow(window);
+                LastShownWindow = window;
             }
         }
 
@@ -164,15 +132,20 @@ namespace TLP.UI
             }
         }
 
-        public void Back()
+        public Window GetWindow(string id)
         {
-            lock (windowChangeLock)
+            id = SanitizeID(id);
+
+            if (registeredWindows.TryGetValue(id, out Window result))
             {
-                LastActivatedWindow.CurrentLayer.Back();
+                return result;
             }
+
+            return null;
         }
 
-        public void UnregisterAll()
+        // TODO: Is this even needed?
+        public void UnregisterAllWindows()
         {
             foreach (var wnd in registeredWindows.Values)
                 wnd.gameObject.SetActive(false);
@@ -188,66 +161,36 @@ namespace TLP.UI
             registeredWindows[id] = wnd;
         }
 
-        public Window GetWindow(string id)
-        {
-            id = SanitizeID(id);
+        #endregion
 
-            if (registeredWindows.TryGetValue(id, out Window result))
-            {
+        #region Layers
+
+        public const char LayerSeparator = '/';
+        public Layer DefaultLayer { get; private set; }
+
+        public Layer GetLayer(string id)
+        {
+            if (layers.TryGetValue(SanitizeID(id), out Layer result))
                 return result;
-            }
 
             return null;
+
+            // TODO: Why would this throw
+            //throw new System.ArgumentException("No layer registered as " + id);
         }
 
-        /*
-        // Sound
-        public enum Sound
+        public bool LayerExists(string id)
         {
-            WindowShow,
-            WindowHide,
-            Submit,
-            Cancel,
-            SelectionChanged
+            return layers.ContainsKey(SanitizeID(id));
         }
-        
-        public static void PlaySound(Sound sound)
+
+        // TODO: Not sure about this one though...
+        public IEnumerable<Layer> GetLayers()
         {
-            if (Instance.audioSource != null)
-            {
-                AudioClip clip = null;
-
-                switch (sound)
-                {
-                    case Sound.WindowShow:
-                        clip = Instance.windowShowSound;
-                        break;
-                    case Sound.WindowHide:
-                        clip = Instance.windowHideSound;
-                        break;
-                    case Sound.Submit:
-                        clip = Instance.submitSound;
-                        break;
-                    case Sound.Cancel:
-                        clip = Instance.cancelSound;
-                        break;
-                    case Sound.SelectionChanged:
-                        clip = Instance.selectionChangedSound;
-                        break;
-                    default:
-                        break;
-                }
-
-                if (clip != null)
-                    Instance.audioSource.PlayOneShot(clip);
-            }
+            return layers.Values;
         }
-        */
 
-        public bool HasPrevNextButtons()
-        {
-            return (!string.IsNullOrEmpty(PreviousUIButton) && !string.IsNullOrEmpty(NextUIButton));
-        }
+        #endregion
 
         private readonly Dictionary<string, Window> registeredWindows = new Dictionary<string, Window>();
         private readonly Dictionary<string, Layer> layers = new Dictionary<string, Layer>();
@@ -263,7 +206,7 @@ namespace TLP.UI
                 // Find child layers and register them
                 foreach (var layer in gameObject.GetComponentsInChildren<Layer>())
                 {
-                    AddLayer(layer);
+                    AddExistingLayer(layer);
                 }
 
                 // Create layers from preCreatedLayers
@@ -398,6 +341,8 @@ namespace TLP.UI
             }
         }
 
+        #region Unity messages
+
         private void Awake()
         {
             if (Instance == null)
@@ -429,10 +374,12 @@ namespace TLP.UI
 
         private void Reset()
         {
-            audioSource = GetComponent<AudioSource>();
+            //audioSource = GetComponent<AudioSource>();
         }
 
-        private void AddLayer(Layer layer)
+        #endregion
+
+        private void AddExistingLayer(Layer layer)
         {
             string id = SanitizeID(layer.ID);
 
@@ -474,12 +421,12 @@ namespace TLP.UI
             var layer = go.AddComponent<Layer>();
             layer.ID = name;
 
-            AddLayer(layer);
+            AddExistingLayer(layer);
 
             return layer;
         }
 
-        public const char LayerSeparator = '/';
+        
 
         // TODO: Maybe fuck this? Just inserting possible extra GC for almost every use case?
         public static string SanitizeID(string value)

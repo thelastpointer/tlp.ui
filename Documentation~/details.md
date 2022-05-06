@@ -8,7 +8,7 @@ The WindowManager class handles all windows. It is a singleton -- you can access
 
 The ```WindowManager``` contains ```Layers```, ```Layers``` contain ```Windows```. Essentially, WindowManager manages everything, and Windows are grouped into Layers.
 
-All windows have a Window component. Windows are identified by their `ID`, which is a string. The same is true for ```Layers```.
+All windows have a Window component. Windows are identified by their `ID`, which is a string. The same is true for ```Layers```. IDs are _case-sensitive_ -- I didn't want to thrash the GC by calling string.ToLower() on every operation. Just use lowercase IDs yourself. "User ID Manager" should be "useridmanager". Don't sweat it.
 
 Windows need to be registered. They register themselves at startup (in `Start()`) automatically, but of course this doesn't happen if the window is deactivated by default (as it usually is), so the WindowManager can gather all Windows in a scene _in the editor_. To do this, select the WindowManager and click the "Register All Windows" button in the inspector.
 
