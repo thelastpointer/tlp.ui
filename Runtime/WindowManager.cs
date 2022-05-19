@@ -132,6 +132,15 @@ namespace TLP.UI
             }
         }
 
+        public void ShowWindow(Window window)
+        {
+            throw new System.NotImplementedException();
+        }
+        public void CloseWindow(Window window)
+        {
+            throw new System.NotImplementedException();
+        }
+
         public Window GetWindow(string id)
         {
             id = SanitizeID(id);
@@ -229,6 +238,9 @@ namespace TLP.UI
 
                     // Add to correct layer
                     AssignWindowDefaultLayer(wnd);
+
+                    // Hide by default
+                    wnd.Close();
                 }
             }
         }

@@ -25,7 +25,6 @@ namespace TLP.UI
 
         public Selectable FirstControl => firstControl;
 
-
         public int OrderInLayer => -1;
         
         /// <summary>
@@ -54,9 +53,9 @@ namespace TLP.UI
             WindowManager.Instance.ShowWindow(windowID);
         }
         
-        public void Hide()
+        public void Close()
         {
-            throw new System.NotImplementedException();
+            WindowManager.Instance.CloseWindow(windowID);
         }
 
         protected void Start()
